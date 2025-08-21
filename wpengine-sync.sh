@@ -1,22 +1,23 @@
 #!/usr/bin/env bash
 
-# Syncs the database and files from a specified Pantheon environment.
+# Syncs the database and files from a specified WP Engine environment.
 
-# Command Example: wpengine-sync --site-name=MySite --site-slug=my-site --site-id=7acab2d5-c574-4c73-9baf-d9ec1e17abc3 --env=live --live-domain=mysite.com --test-domain=staging.mysite.com --dev-domain=dev.mysite.com --ddev-domain=my-site.ddev.site
+# Command Example: wpengine-sync --site-name="My Site" --env=live --live-env-slug=liveenv --test-env-slug=testenv --dev-env-slug=devenv --live-domain=mysite.com --test-domain=staging.mysite.com --dev-domain=dev.mysite.com --ddev-domain=my-site.ddev.site
 
 # Flags:
-#   --site-name             The name of the site on the Pantheon dashboard (e.g., "My Site").
-#   --site-slug             The slug of the site, which is found in the Pantheon environment URL (e.g., "my-site").
-#   --site-id               The unique ID of the site (e.g., "7acab2d5-c574-4c73-9baf-d9ec1e17abc3").
-#   --env                   The environment to pull from ("dev", "test", or "live").
-#   --live-domain           One or more live domains for the site. See the note below for details.
-#   --test-domain           One or more test/staging domains for the site. See the note below for details.
-#   --dev-domain            One or more development domains for the site. See the note below for details.
-#   --ddev-domain           One or more DDEV domains for the site. See the note below for details.
-#   --verbose               Enables verbose output for debugging purposes.
-#   --version               Shows the version of the script.
-#   --update                Updates the "wpengine-sync" homebrew formula.
-#   --help                  Shows command usage and available flags.
+#   --site-name        The name of the site on the WP Engine dashboard (e.g., "My Site").
+#   --env              The environment to pull from ("dev", "test", or "live").
+#   --live-env-slug    The live environment slug.
+#   --test-env-slug    The test/staging environment slug.
+#   --dev-env-slug     The development environment slug.
+#   --live-domain      One or more live domains for the site. See the note below for details.
+#   --test-domain      One or more test/staging domains for the site. See the note below for details.
+#   --dev-domain       One or more development domains for the site. See the note below for details.
+#   --ddev-domain      One or more DDEV domains for the site. See the note below for details.
+#   --verbose          Enables verbose output for debugging purposes.
+#   --version          Shows the version of the script.
+#   --update           Updates the "wpengine-sync" homebrew formula.
+#   --help             Shows command usage and available flags.
 
 # Note for Domain URLs
 
@@ -26,18 +27,18 @@
 
 # 2. Each environment domain flag must have the same number of domains, and in the same order, as the other environment domain flags, to ensure that the wp search-replace command can replace each source domain with the correct DDEV domain.
 
-# For example, if you have two different domains for each environment on Pantheon (e.g., the default Pantheon environment URL, and the custom domain), and the site is a multisite with an additional domain (e.g., a blog site), you would specify all 3 domains for each environment like this:
+# For example, if you have two different domains for each environment on WP Engine (e.g., the default WP Engine environment URL, and the custom domain), and the site is a multisite with an additional domain (e.g., a blog site), you would specify all 3 domains for each environment like this:
 
-#   --live-domain=live-example.pantheonsite.io,example.com,blog.example.com
-#   --test-domain=test-example.pantheonsite.io,staging.example.com,staging.blog.example.com
-#   --dev-domain=dev-example.pantheonsite.io,dev.example.com,dev.blog.example.com
+#   --live-domain=liveenv.wpenginepowered.com,example.com,blog.example.com
+#   --test-domain=testenv.wpenginepowered.com,staging.example.com,staging.blog.example.com
+#   --dev-domain=devenv.wpenginepowered.com,dev.example.com,dev.blog.example.com
 #   --ddev-domain=example.ddev.site,example.ddev.site,blog.example.ddev.site
 
-VERSION="0.1.0"
-DDEV_DOMAINS=()
-DEV_DOMAINS=()
-TEST_DOMAINS=()
+VERSION="0.2.0"
 LIVE_DOMAINS=()
+TEST_DOMAINS=()
+DEV_DOMAINS=()
+DDEV_DOMAINS=()
 VERBOSE=0
 
 extract_domains() {
@@ -108,10 +109,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     
     --update)
-      brew uninstall wpengine-sync
+      brew uninstall pantheon-sync wpengine-sync
       brew untap padillaco/formulas
       brew tap padillaco/formulas
-      brew install wpengine-sync
+      brew install pantheon-sync wpengine-sync
       exit 0
       ;;
 
@@ -123,7 +124,7 @@ while [[ $# -gt 0 ]]; do
     --help)
       echo -e "Usage: wpengine-sync [flags]\n"
       echo "Flags:"
-      echo -e "  --site-name        The name of the site on the Pantheon dashboard (e.g., \"My Site\")."
+      echo -e "  --site-name        The name of the site on the WP Engine dashboard (e.g., \"My Site\")."
       echo -e "  --env              The environment to pull from (\"dev\", \"test\", or \"live\")."
       echo -e "  --live-env-slug    The live environment slug."
       echo -e "  --test-env-slug    The test/staging environment slug."
@@ -140,7 +141,7 @@ while [[ $# -gt 0 ]]; do
       echo -e "\n\033[1m\033[33m1.\033[0m To specify multiple domains for an environment, provide a comma-separated list of domains within a single flag. For example:"
       echo -e "\n  --dev-domain=\033[36mdev1.example.com\033[0m,\033[36mdev2.example.com\033[0m"
       echo -e "\n\033[1m\033[33m2.\033[0m Each environment domain flag must have the same number of domains, and in the same order, as the other environment domain flags, to ensure that the \033[36mwp search-replace\033[0m command can replace each source domain with the correct DDEV domain."
-      echo -e "\nFor example, if you have two different domains for each environment on Pantheon (e.g., the default Pantheon environment URL, and the custom domain), and the site is a multisite with an additional domain (e.g., a blog site), you would specify all 3 domains for each environment like this:\n"
+      echo -e "\nFor example, if you have two different domains for each environment on WP Engine (e.g., the default WP Engine environment URL, and the custom domain), and the site is a multisite with an additional domain (e.g., a blog site), you would specify all 3 domains for each environment like this:\n"
       echo -e "  --live-domain=\033[36mliveenv.wpenginepowered.com\033[0m,\033[36mexample.com\033[0m,\033[36mblog.example.com\033[0m"
       echo -e "  --test-domain=\033[36mtestenv.wpenginepowered.com\033[0m,\033[36mstaging.example.com\033[0m,\033[36mstaging.blog.example.com\033[0m"
       echo -e "  --dev-domain=\033[36mdevenv.wpenginepowered.com\033[0m,\033[36mdev.example.com\033[0m,\033[36mdev.blog.example.com\033[0m"
@@ -195,7 +196,7 @@ elif [[ "$ENV" == "live" ]]; then
     echo -e "\033[31mPlease provide a live environment slug using the --live-env-slug flag.\033[0m"
     exit 0
   fi
-  
+
   if [ ${#LIVE_DOMAINS[@]} -eq 0 ]; then
     echo -e "\033[31mPlease provide a live domain using the --live-domain flag.\033[0m"
     exit 0
@@ -237,23 +238,6 @@ run_with_spinner() {
   return $exit_code
 }
 
-REMOTE_SSH_TARGET="$SOURCE_ENV_SLUG@$SOURCE_ENV_SLUG.ssh.wpengine.net"
-REMOTE_UPLOADS_DIR="~/sites/$SOURCE_ENV_SLUG/wp-content/uploads"
-REMOTE_DATABASE_BACKUP_DIR="$REMOTE_UPLOADS_DIR/wpe-db-backups"
-BACKUP_DATE=$(date -u +"%Y-%m-%dT%H-%M-%S")
-DATABASE_FILE_NAME="$SOURCE_ENV_SLUG-$BACKUP_DATE-UTC-database.sql.gz"
-REMOTE_DATABASE_FILE_PATH="$REMOTE_DATABASE_BACKUP_DIR/$DATABASE_FILE_NAME"
-
-# Create a backup of the remote environment's database
-run_with_spinner ssh "$REMOTE_SSH_TARGET" "cd $REMOTE_UPLOADS_DIR && wp db export $REMOTE_DATABASE_FILE_PATH"
-
-if [[ "$OUTPUT" == *"Created a backup"* ]]; then
-  echo -e "\033[32mBackup database created\033[0m\n"
-else
-  echo "$OUTPUT"
-  exit 0
-fi
-
 TEMP_DIR="$DDEV_APPROOT/.ddev/.tmp"
 
 # Create a temporary directory if it doesn't exist
@@ -261,20 +245,50 @@ if [ ! -d "$TEMP_DIR" ]; then
   mkdir -p "$TEMP_DIR"
 fi
 
+BACKUP_DATE=$(date -u +"%Y-%m-%dT%H-%M-%S")
+DATABASE_FILE_NAME="$SOURCE_ENV_SLUG-$BACKUP_DATE-UTC-database"
+
+REMOTE_UPLOADS_DIR="/wp-content/uploads"
+REMOTE_UPLOADS_BACKUP_DIR="$REMOTE_UPLOADS_DIR/wpe-db-backups"
+REMOTE_DATABASE_FILE_PATH="$REMOTE_UPLOADS_BACKUP_DIR/$DATABASE_FILE_NAME.db.gz"
+
+SSH_TARGET="$SOURCE_ENV_SLUG@$SOURCE_ENV_SLUG.ssh.wpengine.net"
+SSH_UPLOADS_DIR="~/sites/${SOURCE_ENV_SLUG}${REMOTE_UPLOADS_DIR}"
+SSH_UPLOADS_BACKUP_DIR="~/sites/${SOURCE_ENV_SLUG}${REMOTE_UPLOADS_BACKUP_DIR}"
+SSH_DATABASE_FILE_PATH="$SSH_UPLOADS_BACKUP_DIR/$DATABASE_FILE_NAME.db.gz"
+
+LOCAL_DATABASE_FILE_PATH="$TEMP_DIR/$DATABASE_FILE_NAME.sql.gz"
+
+# Ensure the remote backup directory exists, then create a backup of the remote environment's database
+run_with_spinner ssh "$SSH_TARGET" "mkdir -p '$SSH_UPLOADS_BACKUP_DIR' && wp db export - | gzip > '$SSH_DATABASE_FILE_PATH' && [ -e '$SSH_DATABASE_FILE_PATH' ] && echo 'Backup database created'"
+
+if [[ "$OUTPUT" == *"Backup database created"* ]]; then
+  echo -e "\033[32mBackup database created\033[0m\n"
+else
+  echo "$OUTPUT"
+  exit 0
+fi
+
 echo -e "Downloading the backup database..."
 
-run_with_spinner scp "$REMOTE_SSH_TARGET:$REMOTE_DATABASE_FILE_PATH" "$TEMP_DIR/"
+run_with_spinner curl -o "$LOCAL_DATABASE_FILE_PATH" "https://${LIVE_DOMAINS[0]}${REMOTE_DATABASE_FILE_PATH}"
 
-if [ -e "$TEMP_DIR/$DATABASE_FILE_NAME" ]; then
+if [ -e "$LOCAL_DATABASE_FILE_PATH" ]; then
   echo -e "\033[32mBackup database downloaded\033[0m\n"
 else
   echo "$OUTPUT"
   exit 0
 fi
 
+# Remove the remote database backup file
+run_with_spinner ssh "$SSH_TARGET" "rm -f \"$SSH_UPLOADS_BACKUP_DIR\"/*.db.gz"
+
 echo "Importing the database..."
 
-run_with_spinner ddev import-db --file="$TEMP_DIR/$DATABASE_FILE_NAME"
+run_with_spinner ddev import-db --file="$LOCAL_DATABASE_FILE_PATH"
+
+# Remove the temporary folder and its contents
+rm -rf "$TEMP_DIR"
 
 if [[ "$OUTPUT" == *"Successfully imported"* ]]; then
   echo -e "\033[32mThe database was successfully imported\033[0m"
@@ -282,9 +296,6 @@ else
   echo "$OUTPUT"
   exit 0
 fi
-
-# Remove the temporary folder and its contents
-rm -rf "$TEMP_DIR"
 
 if [[ "${#SOURCE_ENV_DOMAINS[@]}" -eq 1 ]]; then
   echo -e "\nReplacing URLs in the database from \033[36m$SOURCE_ENV_DOMAINS\033[0m to \033[36m$DDEV_DOMAINS\033[0m..."
@@ -299,7 +310,7 @@ fi
 REPLACEMENT_COMMANDS=()
 
 for ((i=0; i<${#SOURCE_ENV_DOMAINS[@]}; i++)); do
-  REPLACEMENT_COMMANDS+=("ddev wp search-replace '(^|[^@])${SOURCE_ENV_DOMAINS[$i]}' '\1${DDEV_DOMAINS[$i]}' --url=${SOURCE_ENV_DOMAINS[$i]} --regex --regex-flags=i --all-tables-with-prefix --skip-columns=guid --skip-plugins --skip-themes")
+  REPLACEMENT_COMMANDS+=("ddev wp search-replace '(^|[^@])${SOURCE_ENV_DOMAINS[$i]}' '\1${DDEV_DOMAINS[$i]}' --regex --regex-flags=i --all-tables-with-prefix --skip-columns=guid --skip-plugins --skip-themes")
 done
 
 COMMAND_SEPARATOR=' && '
@@ -341,7 +352,7 @@ fi
 
 echo -e "\nChecking for files to sync..."
 
-FILES_SOURCE="$REMOTE_SSH_TARGET:$REMOTE_UPLOADS_DIR/"
+FILES_SOURCE="$SSH_TARGET:$SSH_UPLOADS_DIR/"
 FILES_DESTINATION="$DDEV_APPROOT/wp-content/uploads/"
 
 # Sync the files from the remote environment to the local uploads folder
