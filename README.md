@@ -30,7 +30,7 @@ $ wpengine-sync --update
 ## Command Example
 
 ```sh
-wpengine-sync --site-name="Example Site" --env=live --live-env-slug=example-live --test-env-slug=example-test --dev-env-slug=example-dev --live-domain=example.com --test-domain=staging.example.com --dev-domain=dev.example.com --ddev-domain=example.ddev.site
+$ wpengine-sync --site-name="Example Site" --env=live --live-env-slug=example-live --test-env-slug=example-test --dev-env-slug=example-dev --live-domain=example.com --test-domain=staging.example.com --dev-domain=dev.example.com --ddev-domain=example.ddev.site
 ```
 
 ## Command Flags
