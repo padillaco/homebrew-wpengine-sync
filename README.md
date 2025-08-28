@@ -2,22 +2,29 @@
 
 Syncs the database and files from a specified WP Engine environment.
 
-- [Installation](#installation)
+- [Installation and Updates](#installation-and-updates)
 - [Command Example](#command-example)
 - [Command Flags](#command-flags)
 - [Note for Domain URLs](#note-for-domain-urls)
 - [DDEV Command Setup](#ddev-command-setup)
 
-## Installation
+## Installation and Updates
 
 **Requirements:**
 - Docker: https://docs.docker.com/engine/install/
 - DDEV: https://ddev.com/get-started/
 - Homebrew: https://brew.sh/
 
+**Installation:**
+
 ```sh
-brew tap padillaco/formulas
-brew install wpengine-sync
+$ brew tap padillaco/formulas
+$ brew install wpengine-sync
+```
+**Updating to a newer version:**
+
+```sh
+$ wpengine-sync --update
 ```
 
 ## Command Example
