@@ -84,4 +84,4 @@ $ wpengine-sync --site-name="Example Site" --env=live --live-env-slug=example-li
 2. In the **Configuration** section within the file, add the required values for each configuration setting.
 3. Run `ddev sync` to sync the database and files from the **live** site, or specify an environment to sync from by running `ddev sync --env=(dev|test|live)`.
 
-**Note:** Running `ddev sync` for the first time will install the `wpengine-sync` command from the set of available Homebrew formulas located at [wpengine-sync.rb](https://github.com/padillaco/homebrew-formulas/blob/main/Formula/wpengine-sync.rb).
+**Note:** Running `ddev sync` for the first time will install the `wpengine-sync` command from the set of available Homebrew formulas located [here](https://github.com/padillaco/homebrew-formulas/tree/main/Formula).
