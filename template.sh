@@ -35,7 +35,7 @@ ENV=""
 LIVE_ENV_SLUG=""
 # The WP Engine test/staging site slug, which is the unique identifier for the site,
 # which can be found in any WP Engine environment URL for the site
-# e.g., https://liveenv.wpenginepowered.com
+# e.g., https://testenv.wpenginepowered.com
 TEST_ENV_SLUG=""
 # The WP Engine development site slug, which is the unique identifier for the site,
 # which can be found in any WP Engine environment URL for the site
