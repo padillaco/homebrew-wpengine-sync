@@ -7,6 +7,7 @@ Syncs the database and files from a specified WP Engine environment.
 - [Command Flags](#command-flags)
 - [Note for Domain URLs](#note-for-domain-urls)
 - [DDEV Command Setup](#ddev-command-setup)
+- [Contributing](#contributing)
 
 ## Installation and Updates
 
@@ -85,3 +86,139 @@ $ wpengine-sync --site-name="Example Site" --env=live --live-env-slug=example-li
 3. Run `ddev sync` to sync the database and files from the **live** site, or specify an environment to sync from by running `ddev sync --env=(dev|test|live)`.
 
 **Note:** Running `ddev sync` for the first time will install the `wpengine-sync` command from the [wpengine-sync.rb](https://github.com/padillaco/homebrew-formulas/blob/main/Formula/wpengine-sync.rb) Homebrew formula.
+
+## Contributing
+
+We welcome contributions to improve wpengine-sync! Here's how to contribute:
+
+### Development Workflow
+
+1. **Fork and Clone**
+   ```sh
+   git clone https://github.com/padillaco/homebrew-wpengine-sync.git
+   cd homebrew-wpengine-sync
+   ```
+
+2. **Make Your Changes**
+   - Edit `wpengine-sync.sh` as needed
+   - Test your changes locally
+   - Update documentation if necessary
+
+3. **Test Locally**
+   ```sh
+   # Test the script directly
+   bash wpengine-sync.sh --help
+   ```
+
+### Versioning and Releases
+
+This project follows [Semantic Versioning](https://semver.org/):
+- **MAJOR** version for incompatible API changes
+- **MINOR** version for new functionality in a backward compatible manner
+- **PATCH** version for backward compatible bug fixes
+
+#### Creating a New Release
+
+1. **Update Version Number**
+   
+   Update the version in `wpengine-sync.sh`:
+   ```sh
+   VERSION="x.y.z"  # e.g., VERSION="0.3.0"
+   ```
+
+2. **Commit Your Changes**
+   ```sh
+   git add .
+   git commit -m "Release v0.3.0: Brief description of changes"
+   git push origin main
+   ```
+
+3. **Create and Push a Git Tag**
+   ```sh
+   git tag -a v0.3.0 -m "Release version 0.3.0"
+   git push origin v0.3.0
+   ```
+
+4. **Create GitHub Release**
+   - Go to https://github.com/padillaco/homebrew-wpengine-sync/releases
+   - Click "Draft a new release"
+   - Select the tag you just created (e.g., `v0.3.0`)
+   - Add release notes describing the changes
+   - Click "Publish release"
+
+   GitHub will automatically create a tarball at:
+   ```
+   https://github.com/padillaco/homebrew-wpengine-sync/archive/refs/tags/v0.3.0.tar.gz
+   ```
+
+### Updating the Homebrew Formula
+
+After publishing a new release, update the Homebrew formula:
+
+1. **Calculate the SHA256 Hash**
+   ```sh
+   curl -L https://github.com/padillaco/homebrew-wpengine-sync/archive/refs/tags/v0.3.0.tar.gz | shasum -a 256
+   ```
+
+2. **Update the Formula**
+   
+   Edit the formula at https://github.com/padillaco/homebrew-formulas/blob/main/Formula/wpengine-sync.rb:
+   
+   ```ruby
+   class WpengineSync < Formula
+     desc "Sync content from WP Engine sites to your local machine"
+     homepage "https://github.com/padillaco/homebrew-wpengine-sync"
+     url "https://github.com/padillaco/homebrew-wpengine-sync/archive/refs/tags/v0.3.0.tar.gz"
+     sha256 "YOUR_NEW_SHA256_HASH_HERE"
+     license "MIT"
+   ```
+
+3. **Test the Formula**
+   ```sh
+   brew uninstall wpengine-sync  # Remove old version
+   brew install --build-from-source wpengine-sync
+   wpengine-sync --version  # Verify new version
+   ```
+
+4. **Commit and Push the Formula Update**
+   ```sh
+   cd /path/to/homebrew-formulas
+   git add Formula/wpengine-sync.rb
+   git commit -m "Update wpengine-sync to v0.3.0"
+   git push origin main
+   ```
+
+### Publishing to GitHub Package Manager
+
+If you want to publish this as a GitHub package:
+
+1. **Ensure Your Repository is Public** or you have proper permissions
+
+2. **Tag Your Release** (already done in step 3 above)
+
+3. **GitHub Packages Integration**
+   - GitHub automatically makes release assets available
+   - Homebrew taps work directly with GitHub releases
+   - Users install via: `brew tap padillaco/formulas && brew install wpengine-sync`
+
+### Pull Request Guidelines
+
+- Write clear, descriptive commit messages
+- Include tests for new features when applicable
+- Update documentation for any changed functionality
+- Keep changes focused and atomic
+- Reference any related issues in your PR description
+
+### Code Style
+
+- Follow existing bash scripting conventions
+- Use meaningful variable names
+- Comment complex logic
+- Keep functions focused and single-purpose
+- Use consistent indentation (2 or 4 spaces)
+
+### Getting Help
+
+- Open an issue for bugs or feature requests
+- Check existing issues before creating new ones
+- Provide detailed information about your environment and the problem
