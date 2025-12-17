@@ -157,7 +157,9 @@ After publishing a new release, update the Homebrew formula:
 
 1. **Calculate the SHA256 Hash**
    ```sh
-   curl -L https://github.com/padillaco/homebrew-wpengine-sync/archive/refs/tags/v0.3.0.tar.gz | shasum -a 256
+   # Download the tarball and calculate its SHA256
+   curl -L https://github.com/padillaco/homebrew-wpengine-sync/archive/refs/tags/v0.3.0.tar.gz -o /tmp/wpengine-sync.tar.gz
+   shasum -a 256 /tmp/wpengine-sync.tar.gz
    ```
 
 2. **Update the Formula**
@@ -187,19 +189,6 @@ After publishing a new release, update the Homebrew formula:
    git commit -m "Update wpengine-sync to v0.3.0"
    git push origin main
    ```
-
-### Publishing to GitHub Package Manager
-
-If you want to publish this as a GitHub package:
-
-1. **Ensure Your Repository is Public** or you have proper permissions
-
-2. **Tag Your Release** (already done in step 3 above)
-
-3. **GitHub Packages Integration**
-   - GitHub automatically makes release assets available
-   - Homebrew taps work directly with GitHub releases
-   - Users install via: `brew tap padillaco/formulas && brew install wpengine-sync`
 
 ### Pull Request Guidelines
 

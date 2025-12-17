@@ -39,7 +39,7 @@
 # 2. The order of domains in each environment domain flag determines the mapping to the DDEV domain. The
 #    script will replace each environment domain found in the database with the corresponding DDEV domain.
 
-VERSION="0.2.1"
+VERSION="0.2.2"
 LIVE_DOMAINS=()
 TEST_DOMAINS=()
 DEV_DOMAINS=()
@@ -292,7 +292,7 @@ fi
 
 echo -e "Downloading the backup database..."
 
-run_with_spinner curl -o "$LOCAL_DATABASE_FILE_PATH" "https://${LIVE_DOMAINS[0]}${REMOTE_DATABASE_FILE_PATH}"
+run_with_spinner curl -o "$LOCAL_DATABASE_FILE_PATH" "https://${SOURCE_ENV_DOMAINS[0]}${REMOTE_DATABASE_FILE_PATH}"
 
 if [ -e "$LOCAL_DATABASE_FILE_PATH" ]; then
   echo -e "\033[32mBackup database downloaded\033[0m\n"
