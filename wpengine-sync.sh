@@ -15,6 +15,9 @@
 #   --dev-domain          One or more development domains for the site. See the note below for details.
 #   --ddev-domain         One or more DDEV domains for the site. See the note below for details.
 #   --ddev-project-root   The root directory of the DDEV project.
+#   --sync                What to sync: 'all' (default), 'db' / 'database', or 'files'.
+#   --ssh-identity        Path to an SSH identity file (e.g., ~/.ssh/wpengine_ed25519).
+#   --multisite           Enables multisite mode, which searches all tables with the site's prefix.
 #   --verbose             Enables verbose output for debugging purposes.
 #   --version             Shows the version of the script.
 #   --update              Updates the "wpengine-sync" homebrew formula.
@@ -39,12 +42,15 @@
 # 2. The order of domains in each environment domain flag determines the mapping to the DDEV domain. The
 #    script will replace each environment domain found in the database with the corresponding DDEV domain.
 
-VERSION="0.2.2"
+VERSION="0.3.0"
 LIVE_DOMAINS=()
 TEST_DOMAINS=()
 DEV_DOMAINS=()
 DDEV_DOMAINS=()
 VERBOSE=0
+SYNC="all"
+SSH_IDENTITY=""
+MULTISITE=0
 
 extract_domains() {
   local input="$1"
@@ -108,6 +114,26 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
 
+    --sync=*)
+      SYNC="${1#*=}"
+      shift
+      ;;
+
+    --ssh-identity=*)
+      SSH_IDENTITY="${1#*=}"
+      shift
+      ;;
+
+    --multisite=*)
+      MULTISITE=${1#*=}
+      shift
+      ;;
+
+    --multisite)
+      MULTISITE=1
+      shift
+      ;;
+
     --verbose=*)
       VERBOSE=${1#*=}
       shift
@@ -144,6 +170,9 @@ while [[ $# -gt 0 ]]; do
       echo -e "  --dev-domain          One or more development domains for the site. See the note below for details."
       echo -e "  --ddev-domain         One or more DDEV domains for the site. See the note below for details."
       echo -e "  --ddev-project-root   The root directory of the DDEV project."
+      echo -e "  --sync                What to sync: 'all' (default), 'db' / 'database', or 'files'."
+      echo -e "  --ssh-identity        Path to an SSH identity file (e.g., ~/.ssh/wpengine_ed25519)."
+      echo -e "  --multisite           Enables multisite mode, which searches all tables with the site's prefix."
       echo -e "  --verbose             Enables verbose output for debugging purposes."
       echo -e "  --version             Shows the version of the script."
       echo -e "  --update              Updates the \"wpengine-sync\" homebrew formula."
@@ -166,7 +195,7 @@ while [[ $# -gt 0 ]]; do
 
     -*|--*)
       echo -e "\033[31mUnknown option $1\033[0m"
-      exit 0
+      exit 1
       ;;
 
     *)
@@ -182,19 +211,19 @@ if [ -z "$DDEV_PROJECT" ]; then
 
   if [ -z "$DDEV_PROJECT" ]; then
     echo -e "\033[31mNo DDEV project detected. Make sure you are executing this command within the directory of a DDEV project, in which the application is running.\033[0m"
-    exit 0
+    exit 1
   fi
 fi
 
 if [[ "$ENV" == "dev" ]]; then
   if [ -z "$DEV_ENV_SLUG" ]; then
     echo -e "\033[31mPlease provide a development environment slug using the --dev-env-slug flag.\033[0m"
-    exit 0
+    exit 1
   fi
 
   if [ ${#DEV_DOMAINS[@]} -eq 0 ]; then
     echo -e "\033[31mPlease provide a development domain using the --dev-domain flag.\033[0m"
-    exit 0
+    exit 1
   fi
 
   SOURCE_ENV_SLUG="$DEV_ENV_SLUG"
@@ -202,12 +231,12 @@ if [[ "$ENV" == "dev" ]]; then
 elif [[ "$ENV" == "test" ]]; then
   if [ -z "$TEST_ENV_SLUG" ]; then
     echo -e "\033[31mPlease provide a test/staging environment slug using the --test-env-slug flag.\033[0m"
-    exit 0
+    exit 1
   fi
 
   if [ ${#TEST_DOMAINS[@]} -eq 0 ]; then
     echo -e "\033[31mPlease provide a staging domain using the --test-domain flag.\033[0m"
-    exit 0
+    exit 1
   fi
 
   SOURCE_ENV_SLUG="$TEST_ENV_SLUG"
@@ -215,23 +244,43 @@ elif [[ "$ENV" == "test" ]]; then
 elif [[ "$ENV" == "live" ]]; then
   if [ -z "$LIVE_ENV_SLUG" ]; then
     echo -e "\033[31mPlease provide a live environment slug using the --live-env-slug flag.\033[0m"
-    exit 0
+    exit 1
   fi
 
   if [ ${#LIVE_DOMAINS[@]} -eq 0 ]; then
     echo -e "\033[31mPlease provide a live domain using the --live-domain flag.\033[0m"
-    exit 0
+    exit 1
   fi
 
   SOURCE_ENV_SLUG="$LIVE_ENV_SLUG"
   SOURCE_ENV_DOMAINS=("${LIVE_DOMAINS[@]}")
 else
   echo -e "\033[31mInvalid environment specified. Use 'dev', 'test', or 'live'.\033[0m"
-  exit 0
+  exit 1
 fi
 
-echo -e "Syncing the database and files from the \033[36m$SITE_NAME $ENV\033[0m environment...\n"
-echo -e "Creating a database backup..."
+if [[ "$SYNC" != "all" && "$SYNC" != "db" && "$SYNC" != "database" && "$SYNC" != "files" ]]; then
+  echo -e "\033[31mInvalid --sync value. Use 'all', 'db', or 'files'.\033[0m"
+  exit 1
+fi
+
+# Normalize "database" to "db"
+if [[ "$SYNC" == "database" ]]; then
+  SYNC="db"
+fi
+
+# Build SSH options from identity file if provided
+SSH_OPTS=(-o LogLevel=ERROR)
+RSYNC_SSH="ssh -o LogLevel=ERROR"
+if [ -n "$SSH_IDENTITY" ]; then
+  SSH_OPTS+=(-i "$SSH_IDENTITY" -o IdentitiesOnly=yes)
+  RSYNC_SSH="ssh -o LogLevel=ERROR -i '$SSH_IDENTITY' -o IdentitiesOnly=yes"
+fi
+
+# These are needed by both the DB and files sections
+REMOTE_UPLOADS_DIR="/wp-content/uploads"
+SSH_TARGET="$SOURCE_ENV_SLUG@$SOURCE_ENV_SLUG.ssh.wpengine.net"
+SSH_UPLOADS_DIR="~/sites/${SOURCE_ENV_SLUG}${REMOTE_UPLOADS_DIR}"
 
 # Show a spinner while running a command
 run_with_spinner() {
@@ -259,6 +308,16 @@ run_with_spinner() {
   return $exit_code
 }
 
+if [[ "$SYNC" == "db" ]]; then
+  echo -e "Syncing the database from the \033[36m$SITE_NAME $ENV\033[0m environment...\n"
+elif [[ "$SYNC" == "files" ]]; then
+  echo -e "Syncing the files from the \033[36m$SITE_NAME $ENV\033[0m environment...\n"
+else
+  echo -e "Syncing the database and files from the \033[36m$SITE_NAME $ENV\033[0m environment...\n"
+fi
+
+if [[ "$SYNC" != "files" ]]; then
+
 TEMP_DIR="$DDEV_APPROOT/.ddev/.tmp"
 
 # Create a temporary directory if it doesn't exist
@@ -269,40 +328,23 @@ fi
 BACKUP_DATE=$(date -u +"%Y-%m-%dT%H-%M-%S")
 DATABASE_FILE_NAME="$SOURCE_ENV_SLUG-$BACKUP_DATE-UTC-database"
 
-REMOTE_UPLOADS_DIR="/wp-content/uploads"
-REMOTE_UPLOADS_BACKUP_DIR="$REMOTE_UPLOADS_DIR/wpe-db-backups"
-REMOTE_DATABASE_FILE_PATH="$REMOTE_UPLOADS_BACKUP_DIR/$DATABASE_FILE_NAME.db.gz"
-
-SSH_TARGET="$SOURCE_ENV_SLUG@$SOURCE_ENV_SLUG.ssh.wpengine.net"
-SSH_UPLOADS_DIR="~/sites/${SOURCE_ENV_SLUG}${REMOTE_UPLOADS_DIR}"
-SSH_UPLOADS_BACKUP_DIR="~/sites/${SOURCE_ENV_SLUG}${REMOTE_UPLOADS_BACKUP_DIR}"
-SSH_DATABASE_FILE_PATH="$SSH_UPLOADS_BACKUP_DIR/$DATABASE_FILE_NAME.db.gz"
-
 LOCAL_DATABASE_FILE_PATH="$TEMP_DIR/$DATABASE_FILE_NAME.sql.gz"
 
-# Ensure the remote backup directory exists, then create a backup of the remote environment's database
-run_with_spinner ssh "$SSH_TARGET" "mkdir -p '$SSH_UPLOADS_BACKUP_DIR' && wp db export - | gzip > '$SSH_DATABASE_FILE_PATH' && [ -e '$SSH_DATABASE_FILE_PATH' ] && echo 'Backup database created'"
+echo -e "Syncing the database..."
 
-if [[ "$OUTPUT" == *"Backup database created"* ]]; then
-  echo -e "\033[32mBackup database created\033[0m\n"
+# Export the database and stream it directly to a local file in a single SSH session
+# stderr is suppressed to prevent PHP warnings from corrupting the gzip stream
+_db_export() { ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "wp db export - 2>/dev/null | gzip" > "$LOCAL_DATABASE_FILE_PATH"; }
+run_with_spinner _db_export
+DB_EXIT=$?
+
+if [ -e "$LOCAL_DATABASE_FILE_PATH" ] && [ "$DB_EXIT" -eq 0 ]; then
+  echo -e "\033[32mDatabase synced\033[0m\n"
 else
-  echo "$OUTPUT"
-  exit 0
+  echo -e "\033[31mFailed to export the database. Check your SSH access to $SSH_TARGET.\033[0m"
+  rm -f "$LOCAL_DATABASE_FILE_PATH"
+  exit 1
 fi
-
-echo -e "Downloading the backup database..."
-
-run_with_spinner curl -o "$LOCAL_DATABASE_FILE_PATH" "https://${SOURCE_ENV_DOMAINS[0]}${REMOTE_DATABASE_FILE_PATH}"
-
-if [ -e "$LOCAL_DATABASE_FILE_PATH" ]; then
-  echo -e "\033[32mBackup database downloaded\033[0m\n"
-else
-  echo "$OUTPUT"
-  exit 0
-fi
-
-# Remove the remote database backup file
-run_with_spinner ssh "$SSH_TARGET" "rm -f \"$SSH_UPLOADS_BACKUP_DIR\"/*.db.gz"
 
 echo "Importing the database..."
 
@@ -315,7 +357,7 @@ if [[ "$OUTPUT" == *"Successfully imported"* ]]; then
   echo -e "\033[32mThe database was successfully imported\033[0m"
 else
   echo "$OUTPUT"
-  exit 0
+  exit 1
 fi
 
 if [[ "${#SOURCE_ENV_DOMAINS[@]}" -eq 1 ]]; then
@@ -328,10 +370,13 @@ else
   done
 fi
 
+MULTISITE_FLAG=""
+[[ "$MULTISITE" -eq 1 ]] && MULTISITE_FLAG=" --all-tables-with-prefix"
+
 REPLACEMENT_COMMANDS=()
 
 for ((i=0; i<${#SOURCE_ENV_DOMAINS[@]}; i++)); do
-  REPLACEMENT_COMMANDS+=("ddev wp search-replace '(^|[^@])${SOURCE_ENV_DOMAINS[$i]}' '\1${DDEV_DOMAINS[$i]}' --regex --regex-flags=i --all-tables-with-prefix --skip-columns=guid --skip-plugins --skip-themes")
+  REPLACEMENT_COMMANDS+=("ddev wp search-replace '(^|[^@])${SOURCE_ENV_DOMAINS[$i]}' '\1${DDEV_DOMAINS[$i]}' --regex --regex-flags=i${MULTISITE_FLAG} --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null")
 done
 
 COMMAND_SEPARATOR=' && '
@@ -371,6 +416,12 @@ else
   echo "$OUTPUT"
 fi
 
+fi # end database sync
+
+SYNC_COMPLETE_NEW_LINE="\n"
+
+if [[ "$SYNC" != "db" ]]; then
+
 echo -e "\nChecking for files to sync..."
 
 FILES_SOURCE="$SSH_TARGET:$SSH_UPLOADS_DIR/"
@@ -395,11 +446,9 @@ FILES_DESTINATION="$DDEV_APPROOT/wp-content/uploads/"
 # For full rsync flag usage and definitions, see: https://linux.die.net/man/1/rsync
 
 # Count total files to sync (excluding already existing files)
-run_with_spinner rsync -rLv4n --stats --ignore-existing --copy-unsafe-links --size-only "$FILES_SOURCE" "$FILES_DESTINATION"
+run_with_spinner rsync -rLv4n --stats --ignore-existing --copy-unsafe-links --size-only -e "$RSYNC_SSH" "$FILES_SOURCE" "$FILES_DESTINATION"
 
 TOTAL_FILES_TO_SYNC=$(echo "$OUTPUT" | gawk '/^Transfer starting:/{flag=1;next}/sent [0-9]+ bytes/{flag=0}flag' | grep -v '^[[:space:]]*$' | grep -v '/$' | grep -v 'Skip existing' | wc -l | xargs)
-
-SYNC_COMPLETE_NEW_LINE="\n"
 
 if [ "$TOTAL_FILES_TO_SYNC" -gt 0 ]; then
   echo -e "Syncing \033[36m$TOTAL_FILES_TO_SYNC\033[0m files..."
@@ -412,7 +461,7 @@ if [ "$TOTAL_FILES_TO_SYNC" -gt 0 ]; then
   SYNC_COMPLETE_NEW_LINE="\n\n"
 
   # Run rsync and parse output
-  rsync -rLv4z --progress --ignore-existing --copy-unsafe-links --size-only "$FILES_SOURCE" "$FILES_DESTINATION" 2>&1 | \
+  rsync -rLv4z --progress --ignore-existing --copy-unsafe-links --size-only -e "$RSYNC_SSH" "$FILES_SOURCE" "$FILES_DESTINATION" 2>&1 | \
   while IFS= read -r line; do
     if [[ "$line" == *"%"* ]]; then
       BYTES=$(echo "$line" | awk '{print $1}' | xargs)
@@ -449,5 +498,7 @@ if [ "$TOTAL_FILES_TO_SYNC" -gt 0 ]; then
 else
   echo -e "\033[32mYou're all caught up!\033[0m"
 fi
+
+fi # end files sync
 
 echo -e "$SYNC_COMPLETE_NEW_LINE\e[1m\033[32mSync complete\033[0m\033[0m"

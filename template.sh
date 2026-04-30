@@ -2,8 +2,8 @@
 
 ## Description: Sync the database and files from a specified WP Engine environment to the local DDEV environment. This script uses the `wpengine-sync` command-line tool to perform the synchronization.
 ## Usage: sync
-## Example: "ddev sync --env=live"
-## Flags: [{"Name":"env","Shorthand":"e","Usage":"The environment to pull from (\"dev\", \"test\", or \"live\")","Type":"string","DefValue":"live"},{"Name":"verbose","Shorthand":"v","Usage":"Enable verbose output","Type":"bool","DefValue":"0"}]
+## Example: "ddev sync --env=live --sync=db"
+## Flags: [{"Name":"env","Shorthand":"e","Usage":"The environment to pull from (\"dev\", \"test\", or \"live\")","Type":"string","DefValue":"live"},{"Name":"sync","Shorthand":"s","Usage":"What to sync: 'all', 'db', or 'files'","Type":"string","DefValue":"all"},{"Name":"ssh-identity","Shorthand":"i","Usage":"Path to an SSH identity file","Type":"string","DefValue":""},{"Name":"verbose","Shorthand":"v","Usage":"Enable verbose output","Type":"bool","DefValue":"0"}]
 
 # --------------------------- SETUP INSTRUCTIONS ---------------------------
 
@@ -54,6 +54,12 @@ DEV_DOMAIN=""
 DDEV_DOMAIN=""
 # Enables verbose output for debugging purposes
 VERBOSE=0
+# What to sync: 'all' (default), 'db', or 'files'
+SYNC="all"
+# Path to an SSH identity file (optional)
+SSH_IDENTITY=""
+# Enables multisite mode (optional)
+MULTISITE=0
 
 # --------------------------- END CONFIGURATION ----------------------------
 
@@ -64,6 +70,16 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
 
+    -s=*|--sync=*)
+      SYNC="${1#*=}"
+      shift
+      ;;
+
+    -i=*|--ssh-identity=*)
+      SSH_IDENTITY="${1#*=}"
+      shift
+      ;;
+
     -v|--verbose)
       VERBOSE=1
       shift
@@ -71,7 +87,7 @@ while [[ $# -gt 0 ]]; do
 
     -*|--*)
       echo -e "\033[0;31mUnknown option $1\033[0m"
-      exit 0
+      exit 1
       ;;
 
     *)
@@ -113,4 +129,7 @@ wpengine-sync \
   --test-domain="$TEST_DOMAIN" \
   --dev-domain="$DEV_DOMAIN" \
   --ddev-domain="$DDEV_DOMAIN" \
+  --sync="$SYNC" \
+  ${SSH_IDENTITY:+--ssh-identity="$SSH_IDENTITY"} \
+  --multisite=$MULTISITE \
   --verbose=$VERBOSE
