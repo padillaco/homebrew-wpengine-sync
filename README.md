@@ -43,9 +43,14 @@ $ wpengine-sync --site-name="Example Site" --env=live --live-env-slug=example-li
 | `--live-env-slug`   | The live environment slug.                                                     |
 | `--test-env-slug`   | The test/staging environment slug.                                             |
 | `--dev-env-slug`    | The development environment slug.                                              |
+| `--live-domain`     | One or more live domains for the site. See the note below for details.         |
 | `--test-domain`     | One or more test/staging domains for the site. See the note below for details. |
 | `--dev-domain`      | One or more development domains for the site. See the note below for details.  |
 | `--ddev-domain`     | One or more DDEV domains for the site. See the note below for details.         |
+| `--ddev-project-root` | The root directory of the DDEV project.                                      |
+| `--sync`            | What to sync: `all` (default), `db` / `database`, or `files`.                 |
+| `--ssh-identity`    | Path to an SSH identity file (e.g., `~/.ssh/wpengine_ed25519`).               |
+| `--multisite`       | Enables multisite mode, which searches all tables with the site's prefix.      |
 | `--verbose`         | Enables verbose output for debugging purposes.                                 |
 | `--version`         | Shows the version of the script.                                               |
 | `--update`          | Updates the "wpengine-sync" homebrew formula.                                  |
@@ -83,7 +88,15 @@ $ wpengine-sync --site-name="Example Site" --env=live --live-env-slug=example-li
 
 1. Copy the [template.sh](template.sh) file to `.ddev/commands/host/wpengine-sync.sh`.
 2. In the **Configuration** section within the file, add the required values for each configuration setting.
-3. Run `ddev sync` to sync the database and files from the **live** site, or specify an environment to sync from by running `ddev sync --env=(dev|test|live)`.
+3. Run `ddev sync` to sync the database and files from the **live** site, or use any of the following options:
+
+| Command | Description |
+|---------|-------------|
+| `ddev sync` | Sync the database and files from the live environment |
+| `ddev sync --env=test` | Sync from the test/staging environment |
+| `ddev sync --db` | Sync the database only |
+| `ddev sync --files` | Sync the files only |
+| `ddev sync --db --files` | Sync both (same as default) |
 
 **Note:** Running `ddev sync` for the first time will install the `wpengine-sync` command from the [wpengine-sync.rb](https://github.com/padillaco/homebrew-formulas/blob/main/Formula/wpengine-sync.rb) Homebrew formula.
 
