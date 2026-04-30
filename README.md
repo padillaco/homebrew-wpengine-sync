@@ -160,6 +160,7 @@ After publishing a new release, update the Homebrew formula:
    # Download the tarball and calculate its SHA256
    curl -L https://github.com/padillaco/homebrew-wpengine-sync/archive/refs/tags/v0.3.0.tar.gz -o /tmp/wpengine-sync.tar.gz
    shasum -a 256 /tmp/wpengine-sync.tar.gz
+   rm /tmp/wpengine-sync.tar.gz
    ```
 
 2. **Update the Formula**
