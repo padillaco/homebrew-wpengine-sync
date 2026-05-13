@@ -5,147 +5,126 @@
 ## Example: "ddev sync --env=live --db"
 ## Flags: [{"Name":"env","Shorthand":"e","Usage":"The environment to pull from (\"dev\", \"test\", or \"live\")","Type":"string","DefValue":"live"},{"Name":"db","Usage":"Sync the database only","Type":"bool","DefValue":"0"},{"Name":"database","Usage":"Sync the database only (alias for --db)","Type":"bool","DefValue":"0"},{"Name":"files","Usage":"Sync the files only","Type":"bool","DefValue":"0"},{"Name":"ssh-identity","Shorthand":"i","Usage":"Path to an SSH identity file","Type":"string","DefValue":""},{"Name":"verbose","Shorthand":"v","Usage":"Enable verbose output","Type":"bool","DefValue":"0"}]
 
-# --------------------------- SETUP INSTRUCTIONS ---------------------------
+# ---------------------------- REQUIREMENTS & USAGE ----------------------------
 
 # Requirements:
 #   - Docker: https://docs.docker.com/engine/install/
 #   - DDEV: https://ddev.com/get-started/
 #   - Homebrew: https://brew.sh/
 #
-# 1. Edit the configuration below to set the WP Engine site name, slug,
-#    ID, environment URLs, and default environment to pull from.
+# 1. Set the website configuration values in the `wpengine-sync` command below.
 #
 # 2. Run `wpengine-sync --help` to see command usage, available flags,
-#    and important notes. If `wpengine-sync` is not installed, running
-#    `ddev sync`, as described below, will install it using Homebrew.
+#    and important notes.
 #
-# 3. Run `ddev sync` to pull the database and files from the live WP Engine
-#    environment into the local DDEV environment, or specify a different
-#    environment using the `--env` flag (e.g., `ddev sync --env=dev`).
+# 3. Run `ddev sync` to sync the database and files from the default environment.
+#    Use flags to customize the sync behavior:
+#
+#      --env=<env>   Pull from a specific environment: "dev", "test", or "live"
+#                    e.g., `ddev sync --env=dev`
+#      --db          Sync the database only
+#                    e.g., `ddev sync --db`
+#      --files       Sync the files only
+#                    e.g., `ddev sync --files`
+#      --verbose     Enable verbose output for debugging
+#                    e.g., `ddev sync --verbose`
 
-# ----------------------------- CONFIGURATION ------------------------------
+# ---------------------------- DEFAULT FLAG VALUES -----------------------------
 
-# The name of the WP Engine site, which is used for identification
-SITE_NAME=""
-# The default WP Engine environment to pull from
-ENV=""
-# The WP Engine development site slug, which is the unique identifier for the site,
-# which can be found in any WP Engine environment URL for the site
-# e.g., https://liveenv.wpenginepowered.com
-LIVE_ENV_SLUG=""
-# The WP Engine test/staging site slug, which is the unique identifier for the site,
-# which can be found in any WP Engine environment URL for the site
-# e.g., https://testenv.wpenginepowered.com
-TEST_ENV_SLUG=""
-# The WP Engine development site slug, which is the unique identifier for the site,
-# which can be found in any WP Engine environment URL for the site
-# e.g., https://devenv.wpenginepowered.com
-DEV_ENV_SLUG=""
-# The WP Engine live environment URL. Use a comma-separated
-# list to specify multiple/alternative domains
-LIVE_DOMAIN=""
-# The WP Engine test environment URL. Use a comma-separated
-# list to specify multiple/alternative domains
-TEST_DOMAIN=""
-# The WP Engine development environment URL. Use a comma-separated
-# list to specify multiple/alternative domains
-DEV_DOMAIN=""
-# The DDEV domain for the local development environment
-DDEV_DOMAIN=""
-# Enables verbose output for debugging purposes
+ENV="live"
+SYNC="all"
 VERBOSE=0
-# Sync flags: set --db and/or --files at the command line, or leave unset to sync all
-SYNC_DB=0
-SYNC_FILES=0
-# Path to an SSH identity file (optional)
 SSH_IDENTITY=""
-# Enables multisite mode (optional)
+
+# -------------------------- WEBSITE CONFIGURATION ----------------------------
+
+# The name of the WP Engine site, used for identification.
+SITE_NAME=""
+
+# Enable multisite mode. Set to 1 for WordPress multisite installs, 0 for standard installs.
 MULTISITE=0
 
-# --------------------------- END CONFIGURATION ----------------------------
+# The WP Engine live environment slug.
+# e.g., "liveenv" if the URL is https://liveenv.wpenginepowered.com
+LIVE_ENV_SLUG=""
 
-while [[ $# -gt 0 ]]; do
-  case $1 in
+# The WP Engine test/staging environment slug.
+# e.g., "testenv" if the URL is https://testenv.wpenginepowered.com
+TEST_ENV_SLUG=""
+
+# The WP Engine development environment slug.
+# e.g., "devenv" if the URL is https://devenv.wpenginepowered.com
+DEV_ENV_SLUG=""
+
+# Custom domains to search/replace for the live environment.
+# Use a comma-separated list to specify multiple domains.
+# Note: the WP Engine environment URL ({slug}.wpenginepowered.com) is auto-added.
+LIVE_SOURCE_DOMAINS=""
+
+# The replacement domains for the live environment (the local DDEV domains).
+# Use a comma-separated list to match the order of LIVE_SOURCE_DOMAINS.
+LIVE_REPLACEMENT_DOMAINS=""
+
+# Custom domains for the test environment (optional, falls back to live domains if not set).
+# Use a comma-separated list to specify multiple domains.
+TEST_SOURCE_DOMAINS=""
+
+# The replacement domains for the test environment (the local DDEV domains).
+# Use a comma-separated list to match the order of TEST_SOURCE_DOMAINS.
+TEST_REPLACEMENT_DOMAINS=""
+
+# Custom domains for the dev environment (optional, falls back to live domains if not set).
+# Use a comma-separated list to specify multiple domains.
+DEV_SOURCE_DOMAINS=""
+
+# The replacement domains for the dev environment (the local DDEV domains).
+# Use a comma-separated list to match the order of DEV_SOURCE_DOMAINS.
+DEV_REPLACEMENT_DOMAINS=""
+
+# ------------------------------------------------------------------------------
+
+for arg in "$@"; do
+  case $arg in
     -e=*|--env=*)
-      ENV="${1#*=}"
-      shift
+      ENV="${arg#*=}"
       ;;
 
     --db|--database)
-      SYNC_DB=1
-      shift
+      SYNC="db"
       ;;
 
     --files)
-      SYNC_FILES=1
-      shift
+      SYNC="files"
       ;;
 
     -i=*|--ssh-identity=*)
-      SSH_IDENTITY="${1#*=}"
-      shift
+      SSH_IDENTITY="${arg#*=}"
       ;;
 
     -v|--verbose)
       VERBOSE=1
-      shift
       ;;
 
     -*|--*)
-      echo -e "\033[0;31mUnknown option $1\033[0m"
+      echo -e "\033[0;31mUnknown option $arg\033[0m"
       exit 1
-      ;;
-
-    *)
-      shift # past argument
       ;;
   esac
 done
 
-# Check if Homebrew is installed
-# If not, prompt the user to install it
-if ! command -v brew >/dev/null 2>&1; then
-  echo -e "\033[0;36mHomebrew is required to run this command. See https://brew.sh/ for installation instructions.\033[0m"
-  exit 1
-fi
-
-# Check if wpengine-sync is installed
-# If not, install it using Homebrew
-if ! command -v wpengine-sync >/dev/null 2>&1; then
-  echo -e "\033[0;33mwpengine-sync is required to run this command.\033[0m\n"
-  echo "Installing wpengine-sync using Homebrew..."
-  echo -e "\033[0;36m>\033[0m brew tap padillaco/formulas"
-  echo -e "\033[0;36m>\033[0m brew install wpengine-sync\n"
-
-  brew tap padillaco/formulas
-  brew install wpengine-sync
-
-  echo -e "\n"
-  sleep 1
-fi
-
-if [[ "$SYNC_DB" -eq 1 && "$SYNC_FILES" -eq 1 ]]; then
-  SYNC="all"
-elif [[ "$SYNC_DB" -eq 1 ]]; then
-  SYNC="db"
-elif [[ "$SYNC_FILES" -eq 1 ]]; then
-  SYNC="files"
-else
-  SYNC="all"
-fi
-
-# Run `wpengine-sync --help` to see command usage and available flags
 wpengine-sync \
   --site-name="$SITE_NAME" \
-  --env="$ENV" \
   --live-env-slug="$LIVE_ENV_SLUG" \
   --test-env-slug="$TEST_ENV_SLUG" \
   --dev-env-slug="$DEV_ENV_SLUG" \
-  --live-domain="$LIVE_DOMAIN" \
-  --test-domain="$TEST_DOMAIN" \
-  --dev-domain="$DEV_DOMAIN" \
-  --ddev-domain="$DDEV_DOMAIN" \
-  --sync="$SYNC" \
-  ${SSH_IDENTITY:+--ssh-identity="$SSH_IDENTITY"} \
+  --live-source-domains="$LIVE_SOURCE_DOMAINS" \
+  --live-replacement-domains="$LIVE_REPLACEMENT_DOMAINS" \
+  --test-source-domains="$TEST_SOURCE_DOMAINS" \
+  --test-replacement-domains="$TEST_REPLACEMENT_DOMAINS" \
+  --dev-source-domains="$DEV_SOURCE_DOMAINS" \
+  --dev-replacement-domains="$DEV_REPLACEMENT_DOMAINS" \
+  --env="$ENV" \
   --multisite=$MULTISITE \
+  --sync="$SYNC" \
+  --ssh-identity="$SSH_IDENTITY" \
   --verbose=$VERBOSE

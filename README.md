@@ -5,7 +5,7 @@ Syncs the database and files from a specified WP Engine environment.
 - [Installation and Updates](#installation-and-updates)
 - [Command Example](#command-example)
 - [Command Flags](#command-flags)
-- [Note for Domain URLs](#note-for-domain-urls)
+- [Note for Domains](#note-for-domains)
 - [DDEV Command Setup](#ddev-command-setup)
 - [Contributing](#contributing)
 
@@ -31,7 +31,7 @@ $ wpengine-sync --update
 ## Command Example
 
 ```sh
-$ wpengine-sync --site-name="Example Site" --env=live --live-env-slug=example-live --test-env-slug=example-test --dev-env-slug=example-dev --live-domain=example.com --test-domain=staging.example.com --dev-domain=dev.example.com --ddev-domain=example.ddev.site
+$ wpengine-sync --site-name="Example Site" --env=live --live-env-slug=example-live --test-env-slug=example-test --dev-env-slug=example-dev --live-source-domains=example.com --live-replacement-domains=example.ddev.site
 ```
 
 ## Command Flags
@@ -43,10 +43,12 @@ $ wpengine-sync --site-name="Example Site" --env=live --live-env-slug=example-li
 | `--live-env-slug`   | The live environment slug.                                                     |
 | `--test-env-slug`   | The test/staging environment slug.                                             |
 | `--dev-env-slug`    | The development environment slug.                                              |
-| `--live-domain`     | One or more live domains for the site. See the note below for details.         |
-| `--test-domain`     | One or more test/staging domains for the site. See the note below for details. |
-| `--dev-domain`      | One or more development domains for the site. See the note below for details.  |
-| `--ddev-domain`     | One or more DDEV domains for the site. See the note below for details.         |
+| `--live-source-domains` | Custom domains to search/replace for the live environment. The WP Engine environment URL (`{slug}.wpenginepowered.com`) is automatically added. |
+| `--live-replacement-domains` | Replacement domains for the live environment (the local DDEV domains). Must match the order of `--live-source-domains`. |
+| `--test-source-domains` | Custom domains for the test environment (optional, falls back to live domains). |
+| `--test-replacement-domains` | Replacement domains for the test environment. Must match the order of `--test-source-domains`. |
+| `--dev-source-domains` | Custom domains for the dev environment (optional, falls back to live domains). |
+| `--dev-replacement-domains` | Replacement domains for the dev environment. Must match the order of `--dev-source-domains`. |
 | `--ddev-project-root` | The root directory of the DDEV project.                                      |
 | `--sync`            | What to sync: `all` (default), `db` / `database`, or `files`.                 |
 | `--ssh-identity`    | Path to an SSH identity file (e.g., `~/.ssh/wpengine_ed25519`).               |
@@ -56,38 +58,27 @@ $ wpengine-sync --site-name="Example Site" --env=live --live-env-slug=example-li
 | `--update`          | Updates the "wpengine-sync" homebrew formula.                                  |
 | `--help`            | Shows command usage and available flags.                                       |
 
-## Note for Domain URLs
+## Note for Domains
 
-1. To specify multiple domains for an environment, provide a comma-separated list of domains for that environment domain flag as shown below.
+1. The WP Engine environment URL (`{slug}.wpenginepowered.com`) is automatically added to the selected environment's source domains and paired with the primary DDEV URL as its replacement, unless that URL is already present.
 
-    **Example:**
+2. Use `--live-source-domains` for the live environment's custom domains. Optionally use `--test-source-domains` and `--dev-source-domains` for environment-specific domains. If env-specific domains are not set, the live domains are used as a fallback.
 
-    In this example, there are 3 different domains for a multisite on WP Engine (the default WP Engine environment URL, the main custom domain, and a subdomain). Each environment domain flag would contain the following domains as a comma-separated list:
-
-    **Live**
+    **Example (multisite with different domains per environment):**
 
     ```sh
-    --live-domain=examplelive.wpenginepowered.com,example.com,blog.example.com
-    ```
-    **Test/Staging**
-    ```sh
-    --test-domain=exampletest.wpenginepowered.com,staging.example.com,staging.blog.example.com
-    ```
-    **Development**
-    ```sh
-    --dev-domain=exampledev.wpenginepowered.com,dev.example.com,dev.blog.example.com
-    ```
-    **DDEV**
-    ```sh
-    --ddev-domain=example.ddev.site,example.ddev.site,blog.example.ddev.site
+    --live-source-domains=blog.example.com,example.com
+    --live-replacement-domains=blog.example.ddev.site,example.ddev.site
+    --test-source-domains=blog.staging.example.com,staging.example.com
+    --test-replacement-domains=blog.example.ddev.site,example.ddev.site
     ```
 
-2. The order of domains in each environment domain flag determines the mapping to the DDEV domain. The script will replace each environment domain found in the database with the corresponding DDEV domain.
+3. The order of domains in source flags determines the mapping to replacement flags. The script will replace each source domain found in the database with the corresponding replacement domain.
 
 ## DDEV Command Setup
 
 1. Copy the [template.sh](template.sh) file to `.ddev/commands/host/wpengine-sync.sh`.
-2. In the **Configuration** section within the file, add the required values for each configuration setting.
+2. Set the website configuration values in the `wpengine-sync` command call within the file.
 3. Run `ddev sync` to sync the database and files from the **live** site, or use any of the following options:
 
 | Command | Description |
