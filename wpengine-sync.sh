@@ -19,7 +19,6 @@
 #   --ddev-project-root         The root directory of the DDEV project.
 #   --sync                      What to sync: 'all' (default), 'db' / 'database', or 'files'.
 #   --ssh-identity              Path to an SSH identity file (e.g., ~/.ssh/wpengine_ed25519).
-#   --multisite                 Enables multisite mode, which searches all tables with the site's prefix.
 #   --verbose                   Enables verbose output for debugging purposes.
 #   --version                   Shows the version of the script.
 #   --update                    Updates the "wpengine-sync" homebrew formula.
@@ -35,7 +34,7 @@
 #    --test-source-domains and --dev-source-domains for environment-specific domains.
 #    If env-specific domains are not set, the live domains are used as a fallback.
 
-#    Example (multisite with different domains per environment):
+#    Example (different domains per environment):
 
 #    --live-source-domains=blog.example.com,example.com
 #    --live-replacement-domains=blog.example.ddev.site,example.ddev.site
@@ -45,7 +44,10 @@
 # 3. The order of domains in source flags determines the mapping to replacement flags. The
 #    script will replace each source domain with the corresponding replacement domain.
 
-VERSION="0.4.4"
+# Version of the script used for release tracking and the Homebrew formula.
+VERSION="0.4.5"
+
+# Domain arrays used to map source and replacement hostnames for each environment.
 LIVE_SOURCE_DOMAINS=()
 LIVE_REPLACEMENT_DOMAINS=()
 TEST_SOURCE_DOMAINS=()
@@ -54,11 +56,13 @@ DEV_SOURCE_DOMAINS=()
 DEV_REPLACEMENT_DOMAINS=()
 SOURCE_DOMAINS=()
 REPLACEMENT_DOMAINS=()
+
+# Runtime configuration flags.
 VERBOSE=0
 SYNC="all"
 SSH_IDENTITY=""
-MULTISITE=0
 
+# Parse a comma-separated list of domains into an array and trim whitespace.
 extract_domains() {
   local input="$1"
   local -n output_array=$2
@@ -69,6 +73,7 @@ extract_domains() {
   done
 }
 
+# Process CLI arguments and set runtime configuration.
 while [[ $# -gt 0 ]]; do
   case $1 in
     --site-name=*)
@@ -141,16 +146,6 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
 
-    --multisite=*)
-      MULTISITE=${1#*=}
-      shift
-      ;;
-
-    --multisite)
-      MULTISITE=1
-      shift
-      ;;
-
     --verbose=*)
       VERBOSE=${1#*=}
       shift
@@ -162,6 +157,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     
     --update)
+      # Refresh the Homebrew formula to pull the latest published version.
       brew uninstall pantheon-sync wpengine-sync
       brew untap padillaco/formulas
       brew tap padillaco/formulas
@@ -191,7 +187,6 @@ while [[ $# -gt 0 ]]; do
       echo -e "  --ddev-project-root         The root directory of the DDEV project."
       echo -e "  --sync                      What to sync: 'all' (default), 'db' / 'database', or 'files'."
       echo -e "  --ssh-identity              Path to an SSH identity file (e.g., ~/.ssh/wpengine_ed25519)."
-      echo -e "  --multisite                 Enables multisite mode, which searches all tables with the site's prefix."
       echo -e "  --verbose                   Enables verbose output for debugging purposes."
       echo -e "  --version                   Shows the version of the script."
       echo -e "  --update                    Updates the \"wpengine-sync\" homebrew formula."
@@ -202,7 +197,7 @@ while [[ $# -gt 0 ]]; do
       echo -e "\033[1m\033[33m2.\033[0m Use \033[36m--live-source-domains\033[0m for live custom domains. Optionally use \033[36m--test-source-domains\033[0m"
       echo -e "   and \033[36m--dev-source-domains\033[0m for environment-specific domains."
       echo -e "   If env-specific domains are not set, the live domains are used as a fallback.\n"
-      echo -e "   \033[1mExample (multisite with different domains per environment):\033[0m\n"
+      echo -e "   \033[1mExample (different domains per environment):\033[0m\n"
       echo -e "   --live-source-domains=\033[36mblog.example.com\033[0m,\033[36mexample.com\033[0m"
       echo -e "   --live-replacement-domains=\033[36mblog.example.ddev.site\033[0m,\033[36mexample.ddev.site\033[0m"
       echo -e "   --test-source-domains=\033[36mblog.staging.example.com\033[0m,\033[36mstaging.example.com\033[0m"
@@ -218,11 +213,12 @@ while [[ $# -gt 0 ]]; do
       ;;
 
     *)
-      shift # past argument
+      shift # Ignore positional arguments.
       ;;
   esac
 done
 
+# Ensure we are running from a DDEV project directory so the local WordPress environment is available.
 if [ -z "$DDEV_PROJECT" ]; then
   if [ -n "$DDEV_PROJECT_ROOT" ] && [ -d "$DDEV_PROJECT_ROOT" ]; then
     cd "$DDEV_PROJECT_ROOT"
@@ -234,6 +230,7 @@ if [ -z "$DDEV_PROJECT" ]; then
   fi
 fi
 
+# Resolve the source WP Engine environment slug and validate that the selected environment is supported.
 if [[ "$ENV" == "dev" ]]; then
   if [ -z "$DEV_ENV_SLUG" ]; then
     echo -e "\033[31mPlease provide a development environment slug using the --dev-env-slug flag.\033[0m"
@@ -260,7 +257,7 @@ else
   exit 1
 fi
 
-# Select domain pair based on environment, with fallback to live domains
+# Select the environment-specific domain pairs, with a fallback to the live configuration when needed.
 if [[ "$ENV" == "test" ]] && [ ${#TEST_SOURCE_DOMAINS[@]} -gt 0 ]; then
   SOURCE_DOMAINS=("${TEST_SOURCE_DOMAINS[@]}")
   REPLACEMENT_DOMAINS=("${TEST_REPLACEMENT_DOMAINS[@]}")
@@ -272,8 +269,7 @@ else
   REPLACEMENT_DOMAINS=("${LIVE_REPLACEMENT_DOMAINS[@]}")
 fi
 
-# Auto-generate the WP Engine environment URL ({slug}.wpenginepowered.com) and add it to
-# SOURCE_DOMAINS if not already present, pairing the primary DDEV URL as its replacement domain.
+# Always include the generated WP Engine URL for the selected environment, pairing it with the primary DDEV URL.
 GENERATED_ENV_DOMAIN="${SOURCE_ENV_SLUG}.wpenginepowered.com"
 DOMAIN_ALREADY_SET=0
 for domain in "${SOURCE_DOMAINS[@]}"; do
@@ -302,7 +298,7 @@ if [[ "$SYNC" == "database" ]]; then
   SYNC="db"
 fi
 
-# Build SSH options from identity file if provided
+# Build the SSH tunnel options for WP Engine access, including any custom SSH identity file.
 SSH_OPTS=(-o LogLevel=ERROR)
 RSYNC_SSH="ssh -o LogLevel=ERROR"
 if [ -n "$SSH_IDENTITY" ]; then
@@ -310,12 +306,12 @@ if [ -n "$SSH_IDENTITY" ]; then
   RSYNC_SSH="ssh -o LogLevel=ERROR -i '$SSH_IDENTITY' -o IdentitiesOnly=yes"
 fi
 
-# These are needed by both the DB and files sections
+# Shared WP Engine remote paths used by both the database and file synchronization steps.
 REMOTE_UPLOADS_DIR="/wp-content/uploads"
 SSH_TARGET="$SOURCE_ENV_SLUG@$SOURCE_ENV_SLUG.ssh.wpengine.net"
 SSH_UPLOADS_DIR="~/sites/${SOURCE_ENV_SLUG}${REMOTE_UPLOADS_DIR}"
 
-# Show a spinner while running a command
+# Run a long-lived command with a simple spinner so the user sees activity while work is happening.
 run_with_spinner() {
   local tmpfile=$(mktemp)
   ("$@") >"$tmpfile" 2>&1 </dev/null &
@@ -351,22 +347,21 @@ fi
 
 if [[ "$SYNC" != "files" ]]; then
 
+# Temporary storage for the exported database before importing it into DDEV.
 TEMP_DIR="$DDEV_APPROOT/.ddev/.tmp"
 
-# Create a temporary directory if it doesn't exist
+# Create a temporary directory if it doesn't exist.
 if [ ! -d "$TEMP_DIR" ]; then
   mkdir -p "$TEMP_DIR"
 fi
 
 BACKUP_DATE=$(date -u +"%Y-%m-%dT%H-%M-%S")
 DATABASE_FILE_NAME="$SOURCE_ENV_SLUG-$BACKUP_DATE-UTC-database"
-
 LOCAL_DATABASE_FILE_PATH="$TEMP_DIR/$DATABASE_FILE_NAME.sql.gz"
 
 echo -e "Syncing the database..."
 
-# Export the database and stream it directly to a local file in a single SSH session
-# stderr is suppressed to prevent PHP warnings from corrupting the gzip stream
+# Export the remote database directly to a compressed file via SSH, suppressing PHP warnings from the remote shell.
 _db_export() { ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "wp db export - 2>/dev/null | gzip" > "$LOCAL_DATABASE_FILE_PATH"; }
 run_with_spinner _db_export
 DB_EXIT=$?
@@ -403,9 +398,7 @@ else
   done
 fi
 
-MULTISITE_FLAG=""
-
-# Sort domains by hierarchy level (number of dots) in descending order to replace lower-level domains first (deepest subdomains before top-level domains)
+# Replace nested domains before top-level ones so the deepest hostnames are updated before broader matches.
 declare -a SORTED_PAIRS
 for ((i=0; i<${#SOURCE_DOMAINS[@]}; i++)); do
   dot_count=$(($(echo "${SOURCE_DOMAINS[$i]}" | tr -cd '.' | wc -c)))
@@ -428,29 +421,20 @@ REPLACEMENT_DOMAINS=("${SORTED_REPLACEMENT_DOMAINS[@]}")
 if [ "$VERBOSE" -eq 1 ]; then
   echo -e "\nRunning the following commands to replace domains in the database:\n"
   for ((i=0; i<${#SOURCE_DOMAINS[@]}; i++)); do
-    DOMAIN_MULTISITE_FLAG=""
-    if [[ "$MULTISITE" -eq 1 ]]; then
-      DOMAIN_MULTISITE_FLAG=" --all-tables-with-prefix --url=${SOURCE_DOMAINS[$i]}"
-    fi
-    echo -e "  \033[36mddev wp search-replace '${SOURCE_DOMAINS[$i]}' '${REPLACEMENT_DOMAINS[$i]}'${DOMAIN_MULTISITE_FLAG} --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null\033[0m"
+    echo -e "  \033[36mddev wp search-replace '${SOURCE_DOMAINS[$i]}' '${REPLACEMENT_DOMAINS[$i]}' --all-tables-with-prefix --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null\033[0m"
   done
   echo ""
 fi
 
+# Apply each domain replacement to the local WordPress database using WP-CLI.
 TOTAL_DOMAIN_COUNT=${#SOURCE_DOMAINS[@]}
 COMPLETED_DOMAIN_COUNT=0
 REPLACEMENTS=0
 SPINSTR='|/-\'
 tput civis 2>/dev/null
 
-
-# Set MULTISITE_FLAG dynamically per domain
 for ((i=0; i<${#SOURCE_DOMAINS[@]}; i++)); do
-  DOMAIN_MULTISITE_FLAG=""
-  if [[ "$MULTISITE" -eq 1 ]]; then
-    DOMAIN_MULTISITE_FLAG=" --all-tables-with-prefix --url=${SOURCE_DOMAINS[$i]}"
-  fi
-  DOMAIN_CMD="ddev wp search-replace '${SOURCE_DOMAINS[$i]}' '${REPLACEMENT_DOMAINS[$i]}'${DOMAIN_MULTISITE_FLAG} --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null"
+  DOMAIN_CMD="ddev wp search-replace '${SOURCE_DOMAINS[$i]}' '${REPLACEMENT_DOMAINS[$i]}' --all-tables-with-prefix --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null"
   DOMAIN_TMPFILE=$(mktemp)
   bash -c "$DOMAIN_CMD" >"$DOMAIN_TMPFILE" 2>&1 </dev/null &
   DOMAIN_CMD_PID=$!
@@ -492,22 +476,13 @@ tput civis 2>/dev/null
 if [ "$VERBOSE" -eq 1 ]; then
   echo -e "\nRunning the following commands to restore email domains in the database:\n"
   for ((i=0; i<${#SOURCE_DOMAINS[@]}; i++)); do
-    EMAIL_MULTISITE_FLAG=""
-    if [[ "$MULTISITE" -eq 1 ]]; then
-      EMAIL_MULTISITE_FLAG=" --all-tables-with-prefix --url=${REPLACEMENT_DOMAINS[$i]}"
-    fi
-    echo -e "  \033[36mddev wp search-replace '@${REPLACEMENT_DOMAINS[$i]}' '@${SOURCE_DOMAINS[$i]}'${EMAIL_MULTISITE_FLAG} --skip-plugins --skip-themes 2>/dev/null\033[0m"
+    echo -e "  \033[36mddev wp search-replace '@${REPLACEMENT_DOMAINS[$i]}' '@${SOURCE_DOMAINS[$i]}' --all-tables-with-prefix --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null\033[0m"
   done
   echo ""
 fi
 
-# Set MULTISITE_FLAG dynamically per domain for email restoration
 for ((i=0; i<${#SOURCE_DOMAINS[@]}; i++)); do
-  EMAIL_MULTISITE_FLAG=""
-  if [[ "$MULTISITE" -eq 1 ]]; then
-    EMAIL_MULTISITE_FLAG=" --all-tables-with-prefix --url=${REPLACEMENT_DOMAINS[$i]}"
-  fi
-  EMAIL_CMD="ddev wp search-replace '@${REPLACEMENT_DOMAINS[$i]}' '@${SOURCE_DOMAINS[$i]}'${EMAIL_MULTISITE_FLAG} --skip-plugins --skip-themes 2>/dev/null"
+  EMAIL_CMD="ddev wp search-replace '@${REPLACEMENT_DOMAINS[$i]}' '@${SOURCE_DOMAINS[$i]}' --all-tables-with-prefix --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null"
   EMAIL_TMPFILE=$(mktemp)
   bash -c "$EMAIL_CMD" >"$EMAIL_TMPFILE" 2>&1 </dev/null &
   EMAIL_CMD_PID=$!
@@ -541,10 +516,8 @@ fi
 
 echo -e "\nFlushing the WordPress cache..."
 
-# Flush the WordPress cache to ensure all changes are applied
-# This command uses the DDEV WP CLI to flush the cache for the specified URL
-# The --skip-plugins and --skip-themes flags are used to avoid running any plugins
-# or themes that might interfere with the cache flush process
+# Clear the local site cache after domain replacements so the new URLs are immediately reflected.
+# The custom flags avoid running WordPress plugins or themes during the cache flush.
 run_with_spinner ddev wp cache flush --url=${REPLACEMENT_DOMAINS[0]} --skip-plugins --skip-themes
 
 if [[ "$OUTPUT" == *"Success:"* ]]; then
@@ -559,13 +532,14 @@ SYNC_COMPLETE_NEW_LINE="\n"
 
 if [[ "$SYNC" != "db" ]]; then
 
+# Pull media uploads from the selected WP Engine environment into the local DDEV project.
 [[ "$SYNC" != "files" ]] && echo ""
 echo "Checking for files to sync..."
 
 FILES_SOURCE="$SSH_TARGET:$SSH_UPLOADS_DIR/"
 FILES_DESTINATION="$DDEV_APPROOT/wp-content/uploads/"
 
-# Sync the files from the remote environment to the local uploads folder
+# Sync the files from the remote environment to the local uploads folder.
 #
 # rsync flags used:
 # 
@@ -583,7 +557,7 @@ FILES_DESTINATION="$DDEV_APPROOT/wp-content/uploads/"
 #
 # For full rsync flag usage and definitions, see: https://linux.die.net/man/1/rsync
 
-# Count total files to sync (excluding already existing files)
+# Count total files to sync (excluding already existing files) before transferring them.
 run_with_spinner rsync -rLv4n --stats --ignore-existing --copy-unsafe-links --size-only -e "$RSYNC_SSH" "$FILES_SOURCE" "$FILES_DESTINATION"
 
 TOTAL_FILES_TO_SYNC=$(echo "$OUTPUT" | gawk '/^Transfer starting:/{flag=1;next}/sent [0-9]+ bytes/{flag=0}flag' | grep -v '^[[:space:]]*$' | grep -v '/$' | grep -v 'Skip existing' | wc -l | xargs)

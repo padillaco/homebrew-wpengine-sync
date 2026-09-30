@@ -41,9 +41,6 @@ SSH_IDENTITY=""
 # The name of the WP Engine site, used for identification.
 SITE_NAME=""
 
-# Enable multisite mode. Set to 1 for WordPress multisite installs, 0 for standard installs.
-MULTISITE=0
-
 # The WP Engine live environment slug.
 # e.g., "liveenv" if the URL is https://liveenv.wpenginepowered.com
 LIVE_ENV_SLUG=""
@@ -124,7 +121,6 @@ wpengine-sync \
   --dev-source-domains="$DEV_SOURCE_DOMAINS" \
   --dev-replacement-domains="$DEV_REPLACEMENT_DOMAINS" \
   --env="$ENV" \
-  --multisite=$MULTISITE \
   --sync="$SYNC" \
   --ssh-identity="$SSH_IDENTITY" \
   --verbose=$VERBOSE
