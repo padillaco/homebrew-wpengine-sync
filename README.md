@@ -19,7 +19,7 @@ Syncs the database and files from a specified WP Engine environment.
 **Installation:**
 
 ```sh
-$ brew tap padillaco/formulas
+$ brew tap padillaco/homebrew-formulas
 $ brew install wpengine-sync
 ```
 **Updating to a newer version:**
