@@ -52,7 +52,6 @@ $ wpengine-sync --site-name="Example Site" --env=live --live-env-slug=example-li
 | `--ddev-project-root` | The root directory of the DDEV project.                                      |
 | `--sync`            | What to sync: `all` (default), `db` / `database`, or `files`.                 |
 | `--ssh-identity`    | Path to an SSH identity file (e.g., `~/.ssh/wpengine_ed25519`).               |
-| `--multisite`       | Enables multisite mode, which searches all tables with the site's prefix.      |
 | `--verbose`         | Enables verbose output for debugging purposes.                                 |
 | `--version`         | Shows the version of the script.                                               |
 | `--update`          | Updates the "wpengine-sync" homebrew formula.                                  |
@@ -64,7 +63,7 @@ $ wpengine-sync --site-name="Example Site" --env=live --live-env-slug=example-li
 
 2. Use `--live-source-domains` for the live environment's custom domains. Optionally use `--test-source-domains` and `--dev-source-domains` for environment-specific domains. If env-specific domains are not set, the live domains are used as a fallback.
 
-    **Example (multisite with different domains per environment):**
+   **Example (different domains per environment):**
 
     ```sh
     --live-source-domains=blog.example.com,example.com
